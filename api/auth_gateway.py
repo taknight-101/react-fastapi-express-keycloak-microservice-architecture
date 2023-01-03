@@ -1,7 +1,7 @@
 
 
 from typing import List, Optional
-
+import requests
 import uvicorn
 from fastapi import FastAPI, Depends, Query, Body
 from pydantic import SecretStr
@@ -52,9 +52,12 @@ def root():
 
 
 
+
+
 # Example User Requests
 
-@app.get("/protected", tags=["example-user-request"])
+
+@app.get("/current_user", tags=["example-user-request"])
 def protected(user: OIDCUser = Depends(idp.get_current_user())):
     return user
 
@@ -69,9 +72,20 @@ def company_admin(user: OIDCUser = Depends(idp.get_current_user(required_roles=[
     return f'Hi admin {user}'
 
 
+#login first to get the access_token , then get the user
 @app.get("/login", tags=["example-user-request"])
 def login(user: UsernamePassword = Depends()):
-    return idp.user_login(username=user.username, password=user.password.get_secret_value())
+ 
+   access_token_dict = idp.user_login(username=user.username, password=user.password.get_secret_value()).dict()
+   access_token = access_token_dict["access_token"]
+ 
+
+   auth_user = requests.get(f"http://localhost:8000/current_user", headers={"Authorization":f"Bearer {access_token}"}).json()
+   auth_user_dict =  dict(auth_user)
+   auth_user_dict.update(access_token_dict)
+   return auth_user_dict
+    
+     
 
 
 # Admin
@@ -108,9 +122,13 @@ def get_user_by_query(query: str = None):
     return idp.get_user(query=query)
 
 
+# after creating user, get an access token for him , and append it back with his data
 @app.post("/users", tags=["user-management"])
 def create_user(username : str, first_name: str, last_name: str, email: str, password: SecretStr, id: str = None):
-    return idp.create_user(first_name=first_name, last_name=last_name, username=username, email=email, password=password.get_secret_value())
+    user_data = idp.create_user(first_name=first_name, last_name=last_name, username=username, email=email, password=password.get_secret_value())
+    user_data = user_data.dict()
+    user_data.update(idp.user_login(username=username, password=password.get_secret_value()).dict())
+    return user_data
 
 
 @app.get("/user/{user_id}", tags=["user-management"])
