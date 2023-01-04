@@ -2,6 +2,11 @@ import React from "react";
 import styled from "styled-components";
 import { Formik, Field, Form, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
+import { useHistory } from "react-router-dom";
+
+
+import {login ,  home , get_current_auth_user_roles , signup , business_signUP} from '../web_api'
+
 
 const Container = styled.div`
   display: flex;
@@ -72,7 +77,8 @@ const ErrorLabel = styled.div`
 `
 
 const SignupSchema = Yup.object().shape({
-   email: Yup.string().email("Invalid email").required("Email can't be empty")
+   email: Yup.string().email("Invalid email").required("Email can't be empty") , 
+   usernane: Yup.string().default('h').required("Username can't be empty") 
  });
 
 const PasswordSchema = Yup.object().shape({
@@ -81,49 +87,136 @@ const PasswordSchema = Yup.object().shape({
                          .test('len', "Weak", val => val.length > 8)
  });
 
-class SignUpComponent extends React.Component {
+
+
+  // SignupSchema.validate({ username: 'jimmy' }).catch(function (err) {
+  //   console.log(err.name)
+  //   console.log(err.errors)
+  // });
+
+ 
+ function validatePassword(value) {
+  var error = undefined;
+
+  try {
+    PasswordSchema.validateSync({password: value})
+  } catch(validationError) {
+    error = validationError.errors[0]
+  }
+console.log(error)
+  return error;
+}
+
+function SignUpComponent (){
   
-  constructor(props) {
-    super(props);
+  let history = useHistory();
 
-    this.handleSubmit = this.handleSubmit.bind(this)
-    this.validatePassword = this.validatePassword.bind(this)
-  }
 
-  handleSubmit(values, actions) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        resolve()
-        alert(JSON.stringify(values))
-      }, 5000)
-    });
-  }
-
-  validatePassword(value) {
-    var error = undefined;
-
-    try {
-      PasswordSchema.validateSync({password: value})
-    } catch(validationError) {
-      error = validationError.errors[0]
-    }
-
-    return error;
-  }
-
-  render() {
        return (
         <Container>
           <ContentContainer>
           <Title>{"Sign Up"}</Title>
           
-          <Formik initialValues={{ email: '', password: '', confirmPassword: '' }} 
-                  onSubmit={this.handleSubmit}
-                  validationSchema={SignupSchema}>
+          <Formik initialValues={{ email: '', password: '', confirmPassword: '' , username: ''  , first_name :'' , last_name : ''}} validationSchema={SignupSchema}
+                  onSubmit={ (values, {setSubmitting}) => {
+                    // alert(JSON.stringify(values))
+
+                    //todo
+                    signup(values.username , values.first_name , values.last_name , values.email, values.password).then((resp)=>{
+                        console.log(resp)
+
+                        const { id , username ,emailVerified , email , access_token } = resp 
+                        const user_info = {id , username , email , access_token }
+                        // call service layer to store user in db  
+                        // localStorage.setItem("access_token", JSON.stringify(access_token));
+
+
+                      // {
+                      //   "id": "1ddeea81-2238-4c6d-9896-3e3ab684280c",
+                      //   "createdTimestamp": 1672743268578,
+                      //   "username": "oy",
+                      //   "enabled": true,
+                      //   "totp": false,
+                      //   "emailVerified": false,
+                      //   "firstName": "oy",
+                      //   "lastName": "oy",
+                      //   "email": "oy@test.com",
+                      //   "disableableCredentialTypes": [],
+                      //   "requiredActions": [],
+                      //   "realmRoles": null,
+                      //   "notBefore": 0,
+                      //   "access": {
+                      //     "manageGroupMembership": true,
+                      //     "view": true,
+                      //     "mapRoles": true,
+                      //     "impersonate": false,
+                      //     "manage": true
+                      //   },
+                      //   "attributes": null
+                      // }
+
+                       
+
+                            get_current_auth_user_roles(access_token).then(roles=>{
+                  
+                            
+                              user_info.roles = roles ; 
+                            localStorage.setItem("user_info", JSON.stringify(user_info));
+
+                           
+
+
+                       business_signUP(user_info.id , user_info.username,user_info.email , values.password , user_info.access_token , roles).then(api_gateway_response => {
+                       
+                        console.log(api_gateway_response)
+  
+                         return history.push("/home")
+                        })
+
+                        
+
+                          }) 
+
+
+
+                     
+
+                    })
+
+                  }}
+                  >
 
             {props => (
 
               <SignUpForm>
+
+                <Label>Username</Label>
+                <UsernameField name="username" type="username"/>
+
+                <ErrorMessage name="username">
+                  {error => <ErrorLabel>{error}</ErrorLabel>}
+                </ErrorMessage>
+
+                
+                <Label>First Name</Label>
+                <UsernameField name="first_name" type="first_name"/>
+
+                <ErrorMessage name="first_name">
+                  {error => <ErrorLabel>{error}</ErrorLabel>}
+                </ErrorMessage>
+
+
+
+                <Label>Last Name</Label>
+                <UsernameField name="last_name" type="last_name"/>
+
+                <ErrorMessage name="last_name">
+                  {error => <ErrorLabel>{error}</ErrorLabel>}
+                </ErrorMessage>
+
+
+
+
                 <Label>Email</Label>
                 <EmailField name="email" type="email"/>
 
@@ -132,14 +225,14 @@ class SignUpComponent extends React.Component {
                 </ErrorMessage>
 
                 <Label>Password</Label>
-                <PasswordField name="password" validate={this.validatePassword} type="password"/>
+                <PasswordField name="password" validate={validatePassword} type="password"/>
 
                 <ErrorMessage name="password">
                   {error => <ErrorLabel>{error}</ErrorLabel>}
                 </ErrorMessage>
 
                 <Label>Confirm Password</Label>
-                <PasswordField name="confirmPassword" validate={this.validatePassword} type="password"/>
+                <PasswordField name="confirmPassword" validate={validatePassword} type="password"/>
 
                 <ErrorMessage name="confirmPassword">
                   {error => <ErrorLabel>{error}</ErrorLabel>}
@@ -154,7 +247,7 @@ class SignUpComponent extends React.Component {
           </ContentContainer>
         </Container>
       ); 
-    }
+   
   }
 
 export default SignUpComponent;

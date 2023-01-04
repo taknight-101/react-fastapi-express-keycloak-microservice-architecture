@@ -127,49 +127,49 @@ function SignInComponent () {
           <ContentContainer>
           <Title>{"Sign In"}</Title>
           
+          
           <Formik initialValues={{ username: '', password: '', rememberMe: false }} 
-                  onSubmit={(values)=>{
+                  onSubmit={(values , {setSubmitting})=>{
 
                       let user_input= values 
                    
                
-                      const out = login('/login').then(access_token=>{
-                  
-                        if(user_input.rememberMe){
-                       
-                          localStorage.setItem("access_token", JSON.stringify(access_token));
-
-
-                          //get authenticated user's roles
-                                          
-                          get_current_auth_user_roles(access_token.access_token).then(roles=>{
-                  
-                            
-                         
-                            localStorage.setItem("user_roles", JSON.stringify(roles));
-
-                        //  1. here we can either call the further portected business service layer , passing in [access_token + our user role ] , get the data , and render it back to react
-
-                        // 2. or we call back to a protected route on react-side [with state ?]
-                        // home(access_token).then(history.push("/home"))
-
-                      home(access_token , roles ).then(api_gateway_response => {
-                       
-                        console.log(api_gateway_response)
+                      const out = login(values.username , values.password).then(resp=>{
+                      
   
-                         return history.push("/home")
-                        })
+                          const { sub : id , preferred_username: username , email_verified : emailVerified , email , access_token  , realm_access} = resp 
+                          const user_info = {id ,  username , email , access_token }
 
+                        if(user_input.rememberMe){} // todo: set long expiration date 
+                       
+                      
                         
 
-                          }) 
+                       
 
 
+                        //get authenticated user's roles =>todo: get the roles from <this> /login route from fastapi via the 2 attributes [realm_access, account_access]
+                                
+                        get_current_auth_user_roles(access_token).then(roles=>{
+                
+                          user_info.roles = roles 
+                          localStorage.setItem("user_info", JSON.stringify(user_info));
 
-                        }else {
-                          //TODO
-                          localStorage.setItem("access_token", true);
-                        }
+                      //  1. here we can either call the further portected business service layer , passing in [access_token + our user role ] , get the data , and render it back to react
+
+                      // 2. or we call back to a protected route on react-side [with state ?]
+                      // home(access_token).then(history.push("/home"))
+
+                    home(access_token , roles ).then(api_gateway_response => {
+                     
+                      console.log(api_gateway_response)
+
+                       return history.push("/home")
+                      })
+
+                      
+
+                        }) 
                         
                        
                       
@@ -179,7 +179,12 @@ function SignInComponent () {
                         
                
                         
-                    } )
+                    } ).catch(e=>{
+
+                        alert("User doesn't exist on the keycloak system :(")
+                        setSubmitting(false)
+
+                    })
 
                   }}
                   validate={handleValidation}>
@@ -188,7 +193,7 @@ function SignInComponent () {
               
               
                //TODO 
-               return  ! localStorage.getItem("access_token") ? (
+               return (
 
 
                     
@@ -225,7 +230,7 @@ function SignInComponent () {
                 <SubmitButton type="submit" disabled={props.isSubmitting}/>
               </SignInForm>
 
-            ) : history.push("/home") 
+            ) 
             
           }
             }

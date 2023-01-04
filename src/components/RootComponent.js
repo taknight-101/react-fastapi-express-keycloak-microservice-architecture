@@ -1,12 +1,18 @@
-import React from "react";
+import React  , {useEffect , useState} from "react";
 import { BrowserRouter as Router, Switch, Route, Redirect } from "react-router-dom";
 import SignInComponent from "./SignInComponent";
 import SignUpComponent from "./SignUpComponent";
 import Welcome from "./Welcome" ; 
+import Home from "./Home"
+import {validate_token} from "../web_api"
+
 
 function RootComponent (){
-  
+
+
+
        return (
+        <>
         <Router>
           <Switch>
 
@@ -15,6 +21,14 @@ function RootComponent (){
               path={"/"}
               render={() => {
                 return <Welcome />;
+              }}
+            />
+
+            <Route
+              exact
+              path={"/signup"}
+              render={() => {
+                return <SignUpComponent />;
               }}
             />
 
@@ -30,21 +44,15 @@ function RootComponent (){
               exact
               path={"/home"}
               render={(prop) => {
-                // debugger;
-                //TODO: just the existing of an access_token is enough to authorize the user at the moment :)
-                return localStorage.getItem("access_token") && <h1> home page </h1>  || <h1> {"sorry, you are un-authorized :("}</h1>;
+             return <Home/>
               }}
             />
 
-            <Route
-              exact
-              path={"/signup"}
-              render={() => {
-                return <SignUpComponent />;
-              }}
-            />
+         
           </Switch>
         </Router>
+
+        </>
       ); 
   }
 
