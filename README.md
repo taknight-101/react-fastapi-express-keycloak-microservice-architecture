@@ -4,8 +4,7 @@
 ## Overview of the Architecture
 ![Architecture](./docs/imgs/architecture.png?raw=true "Architecture")
 
-The repo showcases a microservice-based architcture with 3 layers & 5 main services, the idea being that the propsed architecture is pluggable & extendible, with all the benefits that microsoervices bring to production systems
-
+The repo showcases a microservice-based architecture with 3 layers & 5 main services, the idea being that the proposed architecture is pluggable & extendible, with all the benefits that microservices bring to production systems
 
 ## Tech
 
